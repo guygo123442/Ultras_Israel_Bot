@@ -6,6 +6,10 @@ Ultras Israel Bot
 const { SlashCommandBuilder } = require("discord.js");
 const config = require("../config");
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("dm")
@@ -20,38 +24,59 @@ module.exports = {
   async run(interaction) {
     const messageText = interaction.options.getString("message");
 
-    await interaction.deferReply({ ephemeral: true });
-
-    const members = await interaction.guild.members.fetch();
-
-    let sent = 0;
-    let failed = 0;
-
-    for (const [, member] of members) {
-      if (member.user.bot) continue;
-
-      try {
-        await member.send(`**Ultras Israel**\n\n${messageText}`);
-        sent++;
-      } catch {
-        failed++;
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 1200));
-    }
+    await interaction.reply({
+      content: "📩 התחלתי לשלוח לכולם בפרטי. זה רץ ברקע.",
+      ephemeral: true
+    });
 
     const log = interaction.guild.channels.cache.get(config.logChannelId);
+    const guild = interaction.guild;
+    const adminTag = interaction.user.tag;
 
-    if (log) {
-      log.send(
-        `📩 **DM לכולם**\n` +
-        `אדמין: ${interaction.user.tag}\n` +
-        `נשלח: ${sent}\n` +
-        `נכשל: ${failed}\n` +
-        `הודעה: ${messageText}`
-      );
-    }
+    setImmediate(async () => {
+      const members = await guild.members.fetch();
 
-    await interaction.editReply(`✅ סיימתי.\nנשלח: ${sent}\nנכשל: ${failed}`);
+      let sent = 0;
+      let failed = 0;
+      let checked = 0;
+
+      if (log) {
+        await log.send(`📩 **DM לכולם התחיל**\nאדמין: ${adminTag}\nכמות בשרת: ${members.size}`);
+      }
+
+      for (const [, member] of members) {
+        if (member.user.bot) continue;
+
+        checked++;
+
+        try {
+          await member.send(`**Ultras Israel**\n\n${messageText}`);
+          sent++;
+        } catch {
+          failed++;
+        }
+
+        if (checked % 50 === 0 && log) {
+          await log.send(
+            `📩 **DM Progress**\n` +
+            `נבדקו: ${checked}\n` +
+            `נשלח: ${sent}\n` +
+            `נכשל: ${failed}`
+          ).catch(() => {});
+        }
+
+        await sleep(350);
+      }
+
+      if (log) {
+        await log.send(
+          `✅ **DM לכולם הסתיים**\n` +
+          `אדמין: ${adminTag}\n` +
+          `נבדקו: ${checked}\n` +
+          `נשלח: ${sent}\n` +
+          `נכשל: ${failed}`
+        ).catch(() => {});
+      }
+    });
   }
 };
