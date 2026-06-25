@@ -41,5 +41,31 @@ module.exports = {
         `אחרי: ${newMember.nickname || "אין"}`
       );
     }
+
+    const oldTimeout = oldMember.communicationDisabledUntilTimestamp;
+    const newTimeout = newMember.communicationDisabledUntilTimestamp;
+
+    if (!oldTimeout && newTimeout) {
+      log.send(
+        `🔇 **משתמש קיבל Timeout / Mute**\n` +
+        `משתמש: ${newMember.user.tag}\n` +
+        `עד: <t:${Math.floor(newTimeout / 1000)}:F>`
+      );
+    }
+
+    if (oldTimeout && !newTimeout) {
+      log.send(
+        `🔊 **Timeout / Mute הוסר**\n` +
+        `משתמש: ${newMember.user.tag}`
+      );
+    }
+
+    if (oldTimeout && newTimeout && oldTimeout !== newTimeout) {
+      log.send(
+        `⏳ **Timeout / Mute שונה**\n` +
+        `משתמש: ${newMember.user.tag}\n` +
+        `עד חדש: <t:${Math.floor(newTimeout / 1000)}:F>`
+      );
+    }
   }
 };
